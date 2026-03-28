@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tebak Impostor - Fixed</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; text-align: center; margin: 0; padding: 20px; }
+        .card { background: #1e1e1e; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 400px; margin: auto; border: 1px solid #333; }
+        button { background: #ff4757; color: white; border: none; padding: 15px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; transition: 0.3s; }
+        button:active { transform: scale(0.95); background: #ff6b81; }
+        button:disabled { background: #444; color: #888; cursor: not-allowed; }
+        input { padding: 12px; border-radius: 10px; border: 2px solid #333; background: #222; color: white; width: 80%; margin-bottom: 20px; text-align: center; font-size: 20px; }
+        #kata-display { font-size: 32px; font-weight: 800; color: #2ed573; margin: 25px 0; min-height: 40px; text-transform: uppercase; }
+        .timer { font-size: 18px; color: #ffa502; font-weight: bold; margin-top: 10px; }
+        .hidden { display: none; }
+        p { color: #bbb; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+    <h1 style="color: #ff4757;">🕵️ IMPOSTOR</h1>
+
+    <div id="setup" class="card">
+        <p>Berapa orang yang main?</p>
+        <input type="number" id="jmlPemain" value="3" min="3">
+        <button onclick="mulaiGame()">Mulai Permainan</button>
+    </div>
+
+    <div id="game" class="card hidden">
+        <h2 id="playerTitle" style="color: #ffffff;">Pemain 1</h2>
+        <div id="kata-box">
+            <p id="instruksi">Berikan HP ke pemain ini, lalu tekan tombol di bawah.</p>
+            <div id="kata-display"></div>
+            <p id="timerText" class="timer"></p>
+        </div>
+        <button id="btnAksi" onclick="tampilkanKata()">Buka Kata</button>
+    </div>
+
+    <div id="finish" class="card hidden">
+        <h2 style="color: #2ed573;">Waktunya Diskusi!</h2>
+        <p>Semua pemain sudah melihat kata mereka.</p>
+        <hr style="border: 0.5px solid #333; margin: 20px 0;">
+        <p>Berikan satu kata petunjuk (*clue*) secara bergiliran. Jangan sebutkan kata aslinya!</p>
+        <button onclick="location.reload()">Main Lagi</button>
+    </div>
+
+    <script src="kata.js"></script>
+
+    <script>
+        let daftarPemain = [];
+        let indexSekarang = 0;
+        let countdown;
+
+        function mulaiGame() {
+            // Pastikan daftarKata sudah terload dari kata.js
+            if (typeof daftarKata === 'undefined') {
+                alert("File kata.js tidak ditemukan atau error!");
+                return;
+            }
+
+            const jml = parseInt(document.getElementById('jmlPemain').value);
+            if (jml < 3) return alert("Minimal 3 orang biar seru!");
+
+            // RESET DATA (Agar tidak error saat main ulang)
+            daftarPemain = [];
+            indexSekarang = 0;
+
+            // 1. Pilih kata secara acak dari database
+            const randomPair = daftarKata[Math.floor(Math.random() * daftarKata.length)];
+            const kataWarga = randomPair[0];
+            const kataImpostor = randomPair[1];
+
+            // 2. Tentukan posisi Impostor secara acak
+            const impostorPos = Math.floor(Math.random() * jml);
+
+            // 3. Masukkan ke daftar pemain
+            for (let i = 0; i < jml; i++) {
+                if (i === impostorPos) {
+                    daftarPemain.push(kataImpostor);
+                } else {
+                    daftarPemain.push(kataWarga);
+                }
+            }
+
+            // Pindah ke layar game
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+            updateTampilan();
+        }
+
+        function updateTampilan() {
+            if (indexSekarang < daftarPemain.length) {
+                document.getElementById('playerTitle').innerText = `Pemain ${indexSekarang + 1}`;
+                document.getElementById('kata-display').innerText = "";
+                document.getElementById('timerText').innerText = "";
+                document.getElementById('instruksi').innerText = "Serahkan HP ke Pemain " + (indexSekarang + 1) + ".";
+                document.getElementById('btnAksi').innerText = "Buka Kata";
+                document.getElementById('btnAksi').disabled = false;
+                document.getElementById('btnAksi').style.display = "block";
+            } else {
+                document.getElementById('game').classList.add('hidden');
+                document.getElementById('finish').classList.remove('hidden');
+            }
+        }
+
+        function tampilkanKata() {
+            const display = document.getElementById('kata-display');
+            const timerText = document.getElementById('timerText');
+            const btn = document.getElementById('btnAksi');
+
+            // Tampilkan kata
+            display.innerText = daftarPemain[indexSekarang];
+            btn.style.display = "none"; // Sembunyikan tombol biar nggak dipencet lagi
+            
+            let detik = 4;
+            timerText.innerText = `Kata akan hilang dalam ${detik}...`;
+
+            // Hapus timer lama jika ada
+            clearInterval(countdown);
+
+            countdown = setInterval(() => {
+                detik--;
+                if (detik > 0) {
+                    timerText.innerText = `Kata akan hilang dalam ${detik}...`;
+                } else {
+                    clearInterval(countdown);
+                    indexSekarang++;
+                    updateTampilan();
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
